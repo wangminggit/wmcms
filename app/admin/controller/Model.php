@@ -25,6 +25,9 @@ class Model extends Base
     public function model_list()
     {
 		$models=Db::name('model')->order('create_time desc')->select();
+        $admin_rule=Db::name('auth_rule')->order('sort')->select();
+        $admin_rule = menu_left($admin_rule);
+        $this->assign('admin_rule',$admin_rule);
 		$this->assign('models',$models);
 		return $this->fetch();
 	}
@@ -52,13 +55,20 @@ class Model extends Base
             //添加顶级菜单
             $rst=Db::name('auth_rule')->where('name','Model/cmslist?id='.$model_id)->find();
             if(empty($rst)){
+                $admin_rule_pid=input('admin_rule_pid',0,'intval');
+                if($admin_rule_pid==0){
+                    $level=0;
+                }else{
+                    $rule_pid=Db::name('auth_rule')->find($admin_rule_pid);
+                    $level=$rule_pid['level'];
+                }
                 //不存在
                 $sldata=array(
                     'name'=>'Model',
                     'title'=>input('menu_name',$model['model_title']),
                     'css'=>input('css','fa-list'),
-                    'pid'=>0,
-                    'level'=>1,
+                    'pid'=>$admin_rule_pid,
+                    'level'=>$level+1,
                     'sort'=>input('sort',50,'intval'),
                     'addtime'=>time()
                 );
@@ -69,7 +79,7 @@ class Model extends Base
                         'name'=>'Model/cmsadd?id='.$model_id,
                         'title'=>'增加'.$model['model_title'],
                         'pid'=>$pid1,
-                        'level'=>2,
+                        'level'=>$level+2,
                         'sort'=>20,
                         'addtime'=>time()
                     );
@@ -79,7 +89,7 @@ class Model extends Base
                             'name'=>'cmsrunadd',
                             'title'=>'增加操作',
                             'pid'=>$pid2,
-                            'level'=>3,
+                            'level'=>$level+3,
                             'sort'=>10,
                             'status'=>0,
                             'addtime'=>time()
@@ -93,7 +103,7 @@ class Model extends Base
                         'name'=>'Model/cmslist?id='.$model_id,
                         'title'=>$model['model_title'].'列表',
                         'pid'=>$pid1,
-                        'level'=>2,
+                        'level'=>$level+2,
                         'sort'=>10,
                         'addtime'=>time()
                     );
@@ -101,12 +111,12 @@ class Model extends Base
                     if($pid2){
                         //删除、状态、编辑显示、编辑操作、排序、全部删除
                         $sldata=[
-                            ['name'=>'Model/cmsdel','title'=>'删除操作','pid'=>$pid2,'level'=>3,'status'=>0,'addtime'=>time()],
-                            ['name'=>'Model/cmsstate','title'=>'状态操作','pid'=>$pid2,'level'=>3,'status'=>0,'addtime'=>time()],
-                            ['name'=>'Model/cmsorder','title'=>'排序操作','pid'=>$pid2,'level'=>3,'status'=>0,'addtime'=>time()],
-                            ['name'=>'Model/cmsalldel','title'=>'全部删除','pid'=>$pid2,'level'=>3,'status'=>0,'addtime'=>time()],
-                            ['name'=>'Model/cmsedit','title'=>'编辑显示','pid'=>$pid2,'level'=>3,'status'=>0,'addtime'=>time()],
-                            ['name'=>'Model/cmsrunedit','title'=>'编辑操作','pid'=>$pid2,'level'=>3,'status'=>0,'addtime'=>time()],
+                            ['name'=>'Model/cmsdel','title'=>'删除操作','pid'=>$pid2,'level'=>$level+3,'status'=>0,'addtime'=>time()],
+                            ['name'=>'Model/cmsstate','title'=>'状态操作','pid'=>$pid2,'level'=>$level+3,'status'=>0,'addtime'=>time()],
+                            ['name'=>'Model/cmsorder','title'=>'排序操作','pid'=>$pid2,'level'=>$level+3,'status'=>0,'addtime'=>time()],
+                            ['name'=>'Model/cmsalldel','title'=>'全部删除','pid'=>$pid2,'level'=>$level+3,'status'=>0,'addtime'=>time()],
+                            ['name'=>'Model/cmsedit','title'=>'编辑显示','pid'=>$pid2,'level'=>$level+3,'status'=>0,'addtime'=>time()],
+                            ['name'=>'Model/cmsrunedit','title'=>'编辑操作','pid'=>$pid2,'level'=>$level+3,'status'=>0,'addtime'=>time()],
                         ];
                         Db::name('auth_rule')->insertAll($sldata);
                         Cache::clear();
@@ -158,7 +168,7 @@ class Model extends Base
                     $pid=$rule['pid'];//顶级菜单
                     $arr=Db::name('auth_rule')->select();
                     $ids=array();
-                    $arrTree=getMenuTree($arr, $pid,'pid',$ids);
+                    $arrTree=getMenuTree($arr, $pid,'pid','id',$ids);
                     if(!empty($arrTree)){
                         Db::name('auth_rule')->where('id','in',$ids)->delete();
                         Cache::clear();
@@ -691,9 +701,6 @@ class Model extends Base
 					$item [$kk] = $vv;
 					continue;
 				}
-				if (!isset($this->cms_fields [$kk])) {
-					$kk = substr($kk, 0, strrpos($kk, '_'));
-				}				
 				switch ($this->cms_fields [$kk] ['type']) {
 					case 'images':
 						$images = array();
@@ -729,9 +736,9 @@ class Model extends Base
 						break;	
 					case 'switch' :
 						if ($vv) {
-							$item [$kk] = '<a class="red open-btn" href="'.url('cmsstate',['key'=>$kk,'id'=>$model_id]).'" data-id="'.$v[$this->cms_pk].'" title="开启"><div><button class="btn btn-minier btn-yellow">开启</button></div></a>';
+							$item [$kk] = '<a class="red open-btn" href="'.url('cmsstate',['key'=>$kk,'id'=>$model_id]).'" data-id="'.$v[$this->cms_pk].'" title="已开启"><div><button class="btn btn-minier btn-yellow">开启</button></div></a>';
 						} else {
-							$item [$kk] = '<a class="red open-btn" href="'.url('cmsstate',['key'=>$kk,'id'=>$model_id]).'" data-id="'.$v[$this->cms_pk].'" title="关闭"><div><button class="btn btn-minier btn-danger">关闭</button></div></a>';
+							$item [$kk] = '<a class="red open-btn" href="'.url('cmsstate',['key'=>$kk,'id'=>$model_id]).'" data-id="'.$v[$this->cms_pk].'" title="已禁用"><div><button class="btn btn-minier btn-danger">禁用</button></div></a>';
 						}
 						break;
 					case 'bigtext' :
@@ -745,7 +752,7 @@ class Model extends Base
 						$item [$kk] = htmlspecialchars(join(',', $item [$kk]));
 						break;
 					case 'baidu_map':
-						$item[$kk] = '( ' . $v[$kk . '_lng'] . ', ' . $v[$kk . '_lat'] . ' )';
+						$item[$kk] = htmlspecialchars($vv);
 						break;
 				}
 			}
@@ -757,9 +764,8 @@ class Model extends Base
             $fields[$key]=$this->cms_fields[$key];
         }
         //栏目数据
-        $nav = new \Leftnav;
         $menu_next=Db::name('menu')->where('menu_type <> 4 and menu_type <> 2')-> order('menu_l desc,listorder') -> select();
-        $arr = $nav::menu_n($menu_next);
+        $arr = menu_left($menu_next,'id','parentid');
         $this->assign('menu',$arr);
         $this->assign('model_cid',$model_cid);
 		$this->assign('page',$show);
@@ -1049,12 +1055,43 @@ class Model extends Base
                 'rules'=>'required',
                 'default'=>''];
             $this->cms_fields=array_merge($this->cms_fields,$model['model_fields']?json_decode($model['model_fields'],true):array());
+            //处理baidu_map
+            $fields=array();
+            foreach ($this->cms_fields as $key=>$field){
+                if($field['type']=='baidu_map'){
+                    @list($lng,$lat)=explode(',',$field['default']);
+                    $field['name']=$this->cms_fields[$key]['name'].'_lng';
+                    $field['description']=$this->cms_fields[$key]['description'].'(lng)';
+                    $fields[$key.'_lng']=$field;
+                    $fields[$key.'_lng']['default']=$lng;
+                    $field['name']=$this->cms_fields[$key]['name'].'_lat';
+                    $field['description']=$this->cms_fields[$key]['description'].'(lat)';
+                    $fields[$key.'_lat']=$field;
+                    $fields[$key.'_lat']['default']=$lat;
+                    unset($this->cms_fields[$key]);
+                }
+            }
+            if($fields){
+                $this->cms_fields=array_merge($this->cms_fields,$fields);
+            }
             $this->cms_allfields=array_keys($this->cms_fields);
             if($is_edit){
                 $this->cms_fields_edit=$model['model_edit']?explode(',',$model['model_edit']):array();
                 if(empty($this->cms_fields_edit)){
                     $this->cms_fields_edit=$this->cms_allfields;
                 }else{
+                    //处理baidu_map
+                    $fields=array();
+                    foreach ($this->cms_fields_edit as $key=>$v){
+                        if($this->cms_fields[$v]['type']=='baidu_map'){
+                            $fields[]=$v.'_lng';
+                            $fields[]=$v.'_lat';
+                            unset($this->cms_fields_edit[$key]);
+                        }
+                    }
+                    if($fields){
+                        $this->cms_fields_edit=array_merge($this->cms_fields_edit,$fields);
+                    }
                     $this->cms_fields_edit=array_intersect($this->cms_fields_edit,$this->cms_allfields);
                 }
             }
@@ -1063,6 +1100,18 @@ class Model extends Base
                 if(empty($this->cms_fields_search)){
                     $this->cms_fields_search=$this->cms_allfields;
                 }else{
+                    //处理baidu_map
+                    $fields=array();
+                    foreach ($this->cms_fields_search as $key=>$v){
+                        if($this->cms_fields[$v]['type']=='baidu_map'){
+                            $fields[]=$v.'_lng';
+                            $fields[]=$v.'_lat';
+                            unset($this->cms_fields_search[$key]);
+                        }
+                    }
+                    if($fields){
+                        $this->cms_fields_search=array_merge($this->cms_fields_search,$fields);
+                    }
                     $this->cms_fields_search=array_intersect($this->cms_fields_search,$this->cms_allfields);
                 }
             }
@@ -1071,6 +1120,18 @@ class Model extends Base
                 if(empty($this->cms_fields_list)){
                     $this->cms_fields_list=$this->cms_allfields;
                 }else{
+                    //处理baidu_map
+                    $fields=array();
+                    foreach ($this->cms_fields_list as $key=>$v){
+                        if($this->cms_fields[$v]['type']=='baidu_map'){
+                            $fields[]=$v.'_lng';
+                            $fields[]=$v.'_lat';
+                            unset($this->cms_fields_list[$key]);
+                        }
+                    }
+                    if($fields){
+                        $this->cms_fields_list=array_merge($this->cms_fields_list,$fields);
+                    }
                     $this->cms_fields_list=array_intersect($this->cms_fields_list,$this->cms_allfields);
                     $this->cms_fields_list=array_merge([$model['model_pk'],$model['model_order'],$model['model_cid']],$this->cms_fields_list);
                 }
@@ -1084,7 +1145,6 @@ class Model extends Base
     protected function handle_data($model_id,$fields,$data)
     {
         $fields_data = array();
-        //baidu_map不含_lng _lat,但是$data中需要含_lng _lat
         foreach ($fields as $k) {
             //主键跳过
             if($k==$this->cms_pk){
@@ -1098,13 +1158,10 @@ class Model extends Base
                     $fields_data [$k] ['value'] = join(',',$fields_data [$k] ['images']);
                     break;
                 case 'baidu_map':
-                    $fields_data [$k] ['default'] = explode(',', $fields_data [$k] ['default']);
-                    if(isset($data[$k . '_lng'])){
-                        $fields_data [$k] ['value']['lng'] = $data [$k . '_lng'];
-                        $fields_data [$k] ['value']['lat'] = $data [$k . '_lat'];
+                    if(isset($data[$k])){
+                        $fields_data [$k] ['value'] = $data [$k];
                     }else{
-                        $fields_data [$k] ['value']['lng'] = $fields_data [$k] ['default'][0];
-                        $fields_data [$k] ['value']['lat'] = $fields_data [$k] ['default'][1];
+                        $fields_data [$k] ['value'] = $fields_data [$k] ['default'];
                     }
                     break;
                 case 'text' :
@@ -1132,9 +1189,8 @@ class Model extends Base
                     if($k!=$this->cms_cid){
                         $fields_data [$k] ['option'] = $this->cms_field_option_conv($fields_data [$k] ['data']);
                     }else{
-                        $nav = new \Leftnav;
                         $arr=Db::name('menu')->where(['menu_modelid'=>$model_id,'menu_type'=>3])->select();
-                        $fields_data [$k] ['option']=$nav::menu_n($arr);
+                        $fields_data [$k] ['option']=menu_left($arr,'id','parentid');
                     }
                     break;
                 case 'checkbox' :
@@ -1248,8 +1304,7 @@ class Model extends Base
                         }
                         break;
                     case 'baidu_map':
-                        $postdata [$k . '_lng'] = input("${k}_lng", 0, 'floatval');
-                        $postdata [$k . '_lat'] = input("${k}_lat", 0, 'floatval');
+                        $postdata [$k] = input("${k}", 0, 'floatval');
                         break;
                     case 'text' :
                     case 'bigtext' :
@@ -1298,20 +1353,8 @@ class Model extends Base
             }
             //处理特殊规则-必须
             if (in_array('required', $rules)) {
-                switch ($this->cms_fields[$k]['type']) {
-                    case 'baidu_map':
-                        if (!isset ($postdata [$k . '_lng']) || '' === $postdata [$k . '_lng']) {
-                            $this->error($f ['title'] . ' 不能为空');
-                        }
-                        if (!isset ($postdata [$k . '_lat']) || '' === $postdata [$k . '_lat']) {
-                            $this->error($f ['title'] . ' 不能为空');
-                        }
-                        break;
-                    default:
-                        if (!isset ($postdata [$k]) || '' === $postdata [$k]) {
-                            $this->error($f ['title'] . ' 不能为空');
-                        }
-                        break;
+                if (!isset ($postdata [$k]) || '' === $postdata [$k]) {
+                    $this->error($f ['title'] . ' 不能为空');
                 }
             }
             //处理特殊规则-唯一

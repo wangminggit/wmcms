@@ -225,7 +225,7 @@ $configs= [
       // cookie 名称前缀
         'prefix'    => '',
       // cookie 保存时间
-        'expire'    => 3600*24*7,
+        'expire'    => 3600*24*1,
       // cookie 保存路径
         'path'      => '/',
       // cookie 有效域名
@@ -257,8 +257,8 @@ $configs= [
 		'fontttf'=>'4.ttf',
 		'imageH' => 42,
 		'imageW' => 250,
-		'length' => 5,
-		'useCurve' => false,
+		'length' => 4,
+		'useCurve' => true,
 	],
 ];
 //动态设置
